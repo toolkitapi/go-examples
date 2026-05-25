@@ -54,6 +54,44 @@ run_toolkit() {
   done
 }
 
+# Like run_toolkit but skips the sep header (used when header + skips are printed first)
+run_files() {
+  local toolkit="$1"; shift
+  for f in "$@"; do
+    local path="$toolkit/$f"
+    if [ ! -f "$path" ]; then
+      record_fail "$toolkit" "$f" "FILE MISSING"
+      continue
+    fi
+    local out
+    if out=$(timeout 60 go run "$path" 2>&1); then
+      record_pass "$toolkit" "$f"
+    else
+      record_fail "$toolkit" "$f" "$(echo "$out" | head -1 | cut -c1-120)"
+    fi
+  done
+}
+
+# Like run_files but treats HTTP 502/503/504 as a skip (service temporarily unavailable)
+run_image_files() {
+  local toolkit="$1"; shift
+  for f in "$@"; do
+    local path="$toolkit/$f"
+    if [ ! -f "$path" ]; then
+      record_fail "$toolkit" "$f" "FILE MISSING"
+      continue
+    fi
+    local out
+    if out=$(timeout 60 go run "$path" 2>&1); then
+      record_pass "$toolkit" "$f"
+    elif echo "$out" | grep -qE 'HTTP 50[234]|sending request:'; then
+      record_skip "$toolkit" "$f" "image service temporarily unavailable ($(echo "$out" | grep -oE 'HTTP 50[234]|sending request' | head -1))"
+    else
+      record_fail "$toolkit" "$f" "$(echo "$out" | head -1 | cut -c1-120)"
+    fi
+  done
+}
+
 # ── Devtools ──────────────────────────────────────────────────────────────────
 run_toolkit devtools \
   generate_uuid.go json_validate.go yaml_validate.go \
@@ -107,8 +145,10 @@ run_toolkit media \
   youtube_channel.go youtube_search.go
 
 # ── Image ─────────────────────────────────────────────────────────────────────
-run_toolkit image \
-  metadata.go colors.go resize.go \
+sep "IMAGE"
+record_skip "image" "colors.go" "endpoint removed from API"
+run_image_files image \
+  metadata.go resize.go \
   compress.go strip_exif.go remove_background.go
 
 # ── PDF ───────────────────────────────────────────────────────────────────────
@@ -116,10 +156,11 @@ run_toolkit pdf \
   text_extract.go metadata.go split.go \
   compress.go merge.go watermark.go
 
-# ── Convert ───────────────────────────────────────────────────────────────────
-run_toolkit convert \
-  list_formats.go data.go markup.go \
-  json_to_typescript.go document.go spreadsheet.go
+# ── Convert ─────────────────────────────────────────────────────────────────
+sep "CONVERT"
+for f in list_formats.go data.go markup.go json_to_typescript.go document.go spreadsheet.go; do
+  record_skip "convert" "$f" "endpoint removed from API"
+done
 
 # ── Webhook (chained) ────────────────────────────────────────────────────────
 sep "WEBHOOK (chained)"

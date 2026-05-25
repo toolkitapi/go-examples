@@ -23,7 +23,7 @@ func main() {
 	}
 
 	pdf := toolkitapi.NewPdf(apiKey)
-	result, err := pdf.Compress(context.Background(), map[string]interface{}{
+	result, err := pdf.Compress(context.Background(), map[string]string{
 		"url": pdfURL,
 	})
 	if err != nil {

@@ -23,7 +23,7 @@ func main() {
 	}
 
 	pdf := toolkitapi.NewPdf(apiKey)
-	result, err := pdf.Watermark(context.Background(), map[string]interface{}{
+	result, err := pdf.Watermark(context.Background(), map[string]string{
 		"url":  pdfURL,
 		"text": "CONFIDENTIAL",
 	})
