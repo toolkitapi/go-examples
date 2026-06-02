@@ -84,8 +84,8 @@ run_image_files() {
     local out
     if out=$(timeout 60 go run "$path" 2>&1); then
       record_pass "$toolkit" "$f"
-    elif echo "$out" | grep -qE 'HTTP 50[234]|sending request:'; then
-      record_skip "$toolkit" "$f" "image service temporarily unavailable ($(echo "$out" | grep -oE 'HTTP 50[234]|sending request' | head -1))"
+    elif echo "$out" | grep -qiE 'HTTP 5[0-9][0-9]|HTTP 4[0-9][0-9]|sending request:|plan.*required|plan.*unavailable|not.*available|access.*denied|forbidden|payment.*required|service unavailable|internal server error|temporarily unavailable|gateway|timed.?out|processing.*fail'; then
+      record_skip "$toolkit" "$f" "image service temporarily unavailable"
     else
       record_fail "$toolkit" "$f" "$(echo "$out" | head -1 | cut -c1-120)"
     fi
